@@ -5,41 +5,39 @@ import shutil
 from conans import ConanFile, tools
 
 
-class AndroidtoolchainConan(ConanFile):
+class AndroidToolchainConan(ConanFile):
     name = "android-toolchain"
-    version = "r13b"
+    version = "r17b"
     license = "GPL/APACHE2"
     url = "https://github.com/lasote/conan-android-toolchain"
     settings = "os", "arch", "compiler"
     options = {"use_system_python": [True, False], "ndk_path": "ANY"}
     default_options = "use_system_python=True", "ndk_path=False"
-    requires = "android-ndk/%s@lasote/testing" % version
-    description = "Recipe for building an Android toolchain for cross compile Android apps from Windows/Linux/OSX"
+    requires = "android-ndk/%s@conan-mobile/stable" % version
+    description = "Recipe for building an Android toolchain to cross compile Android apps from Windows/Linux/OSX"
 
     @property
     def ndk_path(self):
         return os.path.expanduser(os.path.join(str(self.options.ndk_path), "build", "tools"))
 
     def configure(self):
+        del self.settings.compiler.libcxx
 
         if self.options.ndk_path:
             if os.path.exists(self.ndk_path):
                 del self.requires["android-ndk"]
             else:
-                raise Exception("Invalid specified path to Android NDK: %s" % self.ndk_path)
+                raise Exception("Invalid path to Android NDK: %s" % self.ndk_path)
 
         if self.settings.os != "Android":
-            raise Exception("Only os Android supported")
-        if str(self.settings.compiler) not in ("gcc", "clang"):
-            raise Exception("Not supported compiler, gcc and clang available")
-        if str(self.settings.compiler) == "gcc" and str(self.settings.compiler.version) not in ("4.8", "4.9"):
-            raise Exception("Not supported gcc compiler version, 4.8 and 4.9 available")
-        if str(self.settings.compiler) == "clang" and str(self.settings.compiler.version) != "3.8":
-            raise Exception("Not supported clang compiler version, only 3.8 available")
+            raise Exception("'os' setting must be 'Android'")
+        if str(self.settings.compiler) not in ("clang"):
+            raise Exception("'compiler' setting must be 'clang'")
+        if str(self.settings.compiler) == "clang" and str(self.settings.compiler.version) != "6.0":
+            raise Exception("'compiler.version' setting must be '6.0'")
 
     @property
     def arch_id_str(self):
-
         return {"mips": "mipsel",
                 "mips64": "mips64",
                 "armv6": "arm",
@@ -50,7 +48,6 @@ class AndroidtoolchainConan(ConanFile):
 
     @property
     def arch_id_str_compiler(self):
-
         return {"x86": "i686",
                 "armv6": "arm",
                 "armv7": "arm",
@@ -64,17 +61,12 @@ class AndroidtoolchainConan(ConanFile):
         return "androideabi" if str(self.settings.arch) in ["armv6", "armv7"] else "android"
 
     def build(self):
-
         compiler_str = {"clang": "clang", "gcc": ""}.get(str(self.settings.compiler))
         toolchain = "%s-linux-%s-%s%s" % (self.arch_id_str, self.android_id_str, compiler_str, self.settings.compiler.version)
-        # Command available in android-ndk package
-        # --stl => gnustl, libc++, stlport
         pre_path = (self.ndk_path + "/") if self.options.ndk_path else ""
-        stl = {"libstdc++": "gnustl", "libstdc++11": "gnustl", "libc++": "libc++"}.get(str(self.settings.compiler.libcxx))
-        command = "%smake-standalone-toolchain.sh --toolchain=%s --platform=android-%s " \
-                  "--install-dir=%s --stl=%s" % (pre_path, toolchain, self.settings.os.api_level, self.package_folder, stl)
+        command = "%smake_standalone_toolchain.py --arch %s --api %s " \
+                  "--install-dir=%s" % (pre_path, self.arch_id_str, self.settings.os.api_level, self.package_folder)
         self.output.warn(command)
-        # self.run("make-standalone-toolchain.sh --help")
         if platform.system != "Windows":
             self.run(command)
         else:
@@ -97,12 +89,8 @@ class AndroidtoolchainConan(ConanFile):
 
     def package_info(self):
         prename = "%s-linux-%s-" % (self.arch_id_str_compiler, self.android_id_str)
-        if self.settings.compiler == "gcc":
-            cc_compiler = prename + "gcc"
-            cxx_compiler = prename + "g++"
-        else:
-            cc_compiler = "clang"
-            cxx_compiler = "clang++"
+        cc_compiler = "clang"
+        cxx_compiler = "clang++"
 
         sysroot = os.path.join(self.package_folder, "sysroot")
         self.env_info.CC =  os.path.join(self.package_folder, "bin", cc_compiler)
@@ -116,7 +104,6 @@ class AndroidtoolchainConan(ConanFile):
         # valid arguments to '-march=' are: armv2 armv2a armv3 armv3m armv4 armv4t armv5 armv5e armv5t armv5te
         # armv6 armv6-m armv6j armv6k armv6s-m armv6t2 armv6z armv6zk armv7 armv7-a armv7-m armv7-r armv7e-m armv7ve
         # armv8-a armv8-a+crc iwmmxt iwmmxt2 native
-
         arch_flag = "-march=%s" % arch if ("arm" in str(arch)) else ""
 
         # Common flags to C, CXX and LINKER
