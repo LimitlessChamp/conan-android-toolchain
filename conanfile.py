@@ -70,12 +70,9 @@ class AndroidtoolchainConan(ConanFile):
     def build(self):
         compiler_str = {"clang": "clang"}.get(str(self.settings.compiler))
         toolchain = "%s-linux-%s-%s%s" % (self.arch_id_str, self.android_id_str, compiler_str, self.settings.compiler.version)
-        # Command available in android-ndk package
-        # --stl => gnustl, libc++, stlport
         pre_path = (self.ndk_path + "/") if self.options.ndk_path else ""
-        stl = {"libstdc++": "gnustl", "libstdc++11": "gnustl", "libc++": "libc++"}.get(str(self.settings.compiler.libcxx))
         command = "%smake_standalone_toolchain.py --arch %s --api %s " \
-                  "--install-dir '%s' --stl libc++" % (pre_path, self.arch_standalone_name, self.settings.os.api_level, self.package_folder)
+                  "--install-dir '%s'" % (pre_path, self.arch_standalone_name, self.settings.os.api_level, self.package_folder)
         self.output.warn(command)
         # self.run("make-standalone-toolchain.sh --help")
         if platform.system != "Windows":

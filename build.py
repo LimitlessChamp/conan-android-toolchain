@@ -5,7 +5,7 @@ if __name__ == "__main__":
 
     builder.add(settings={"compiler": "clang",
                           "compiler.version": "6.0",
-                          "compiler.libcxx": None,                          
+                          "compiler.libcxx": None,                        
                           "os": "Android",
                           "os.api_level": "21",
                           "arch": "armv7",
