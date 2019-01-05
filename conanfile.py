@@ -13,15 +13,16 @@ class AndroidtoolchainConan(ConanFile):
     settings = "os", "arch", "compiler"
     options = {"use_system_python": [True, False], "ndk_path": "ANY"}
     default_options = "use_system_python=True", "ndk_path=False"
-    requires = "android-ndk/%s@conan-mobile/stable" % version
+    requires = "android-ndk/%s@limitless/test" % version
     description = "Recipe for building an Android toolchain for cross compile Android apps from Windows/Linux/OSX"
-
+    short_paths = True
+	
     @property
     def ndk_path(self):
         return os.path.expanduser(os.path.join(str(self.options.ndk_path), "build", "tools"))
 
     def configure(self):
-
+        del self.settings.compiler.libcxx
         if self.options.ndk_path:
             if os.path.exists(self.ndk_path):
                 del self.requires["android-ndk"]
@@ -72,8 +73,10 @@ class AndroidtoolchainConan(ConanFile):
         toolchain = "%s-linux-%s-%s%s" % (self.arch_id_str, self.android_id_str, compiler_str, self.settings.compiler.version)
         pre_path = (self.ndk_path + "/") if self.options.ndk_path else ""
         command = "%smake_standalone_toolchain.py --arch %s --api %s " \
-                  "--install-dir '%s'" % (pre_path, self.arch_standalone_name, self.settings.os.api_level, self.package_folder)
+                  "--install-dir %s" % (pre_path, self.arch_standalone_name, self.settings.os.api_level, self.package_folder)
         self.output.warn(command)
+        self.output.warn(self.package_folder)
+
         # self.run("make-standalone-toolchain.sh --help")
         if platform.system != "Windows":
             self.run(command)
@@ -87,8 +90,8 @@ class AndroidtoolchainConan(ConanFile):
         if platform.system() == "Windows":  # Create clang.exe to make CMake happy
             dest_cc_compiler = os.path.join(self.package_folder, "bin", "clang.exe")
             dest_cxx_compiler = os.path.join(self.package_folder, "bin", "clang++.exe")
-            src_cc_compiler = os.path.join(self.package_folder, "bin", "clang38.exe")
-            src_cxx_compiler = os.path.join(self.package_folder, "bin", "clang38++.exe")
+            src_cc_compiler = os.path.join(self.package_folder, "bin", "clang60.exe")
+            src_cxx_compiler = os.path.join(self.package_folder, "bin", "clang60++.exe")
             shutil.copy(src_cc_compiler, dest_cc_compiler)
             shutil.copy(src_cxx_compiler, dest_cxx_compiler)
 
@@ -116,7 +119,7 @@ class AndroidtoolchainConan(ConanFile):
         arch_flag = "-march=%s" % arch if ("arm" in str(arch)) else ""
 
         # Common flags to C, CXX and LINKER
-        flags = ["-fPIC"]
+        flags = ["-fPIC -D__ANDROID_API__=$API -DANDROID_DEPRECATED_HEADERS=ON"]
         #if self.settings.compiler == "clang":
             #flags.append("--gcc-toolchain=%s" % tools.unix_path(self.package_folder))
             #flags.append("-target %s-linux-android" % arch)
