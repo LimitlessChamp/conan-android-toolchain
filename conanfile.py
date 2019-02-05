@@ -117,9 +117,10 @@ class AndroidtoolchainConan(ConanFile):
         # armv8-a armv8-a+crc iwmmxt iwmmxt2 native
 
         arch_flag = "-march=%s" % arch if ("arm" in str(arch)) else ""
+        arch_flag = "-march=armv7-a"
 
         # Common flags to C, CXX and LINKER
-        flags = ["-fPIC -D__ANDROID_API__=$API -DANDROID_DEPRECATED_HEADERS=ON"]
+        flags = ["-fPIC -D__ANDROID_API__=19 -DANDROID_DEPRECATED_HEADERS=ON"]
         #if self.settings.compiler == "clang":
             #flags.append("--gcc-toolchain=%s" % tools.unix_path(self.package_folder))
             #flags.append("-target %s-linux-android" % arch)
